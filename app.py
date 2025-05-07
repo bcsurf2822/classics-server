@@ -10,7 +10,7 @@ import uuid
 from typing import List, Optional
 
 from create_search_index import create_index_from_txt
-from book_rag_cli import get_available_indexes, search_index, generate_rag_response
+from book_rag_cli import get_available_indexes, search_index, generate_rag_response, get_personality_greeting
 from config import get_logger
 
 
@@ -115,15 +115,27 @@ async def get_book_indexes():
 # Search books API endpoint
 @app.post("/search-books")
 async def search_books(
-    query: str, 
+    query: str = "", 
     index_name: Optional[str] = None,
-    limit: int = 5
+    limit: int = 5,
+    personality: str = "classic_literature"
 ):
     """
     Search books with the given query.
+    If no query is provided, returns a greeting based on the selected personality.
     If index_name is not provided, searches across all available book indexes.
+    personality: The AI assistant's personality to use (classic_literature, philosopher, storyteller, critic)
     """
     try:
+        # If no query is provided, return just the greeting
+        if not query or query.strip() == "":
+            greeting = get_personality_greeting(personality)
+            return {
+                "response": greeting,
+                "personality_used": personality,
+                "is_greeting": True
+            }
+        
         all_contexts = []
         active_indexes = [index_name] if index_name else get_available_indexes()
         
@@ -147,13 +159,14 @@ async def search_books(
         if not all_contexts:
             return {"results": [], "message": "No relevant information found for your query."}
         
-        # Generate RAG response
-        response = generate_rag_response(query, all_contexts)
+        # Generate RAG response with selected personality
+        response = generate_rag_response(query, all_contexts, personality)
         
         return {
             "results": all_contexts,
             "response": response,
-            "indexes_searched": active_indexes
+            "indexes_searched": active_indexes,
+            "personality_used": personality
         }
     except Exception as e:
         logger.error(f"Error processing search request: {str(e)}")

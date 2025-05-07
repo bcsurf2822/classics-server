@@ -7,6 +7,7 @@ from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from config import get_logger, enable_telemetry
+import random
 
 # initialize logging object
 logger = get_logger(__name__)
@@ -77,16 +78,83 @@ def search_index(query: str, index_name: str, k: int = 5):
     
     return results_list
 
-def generate_rag_response(user_query: str, contexts: list):
+def get_personality_greeting(personality: str) -> str:
+    """Generate a unique greeting based on the selected personality."""
+    greetings = {
+        "classic_literature": [
+            "Greetings, literary enthusiast! I'm your guide through the timeless world of classic literature. What would you like to explore today?",
+            "Welcome to the realm of classic literature! Shall we dive into a particular book or discuss literary themes?",
+            "Hello! I'm your classic literature companion. Would you like to analyze a specific work or compare different books?",
+            "Greetings! As your literary guide, I can help you explore themes, characters, or historical context. What interests you today?"
+        ],
+        "philosopher": [
+            "Greetings, seeker of wisdom! I'm here to explore the philosophical depths of classic literature. What profound questions shall we contemplate?",
+            "Welcome! As a philosophical guide through literature, I can help you examine deeper meanings and existential themes. What shall we explore?",
+            "Hello! I'm ready to engage in thoughtful discourse about the philosophical implications in classic works. What would you like to discuss?",
+            "Greetings! Let's examine the philosophical underpinnings of classic literature together. What work or theme shall we analyze?"
+        ],
+        "storyteller": [
+            "Welcome to the magical world of storytelling! I'm here to bring classic literature to life. What tale shall we explore today?",
+            "Greetings, fellow story lover! I can help you discover the narrative wonders of classic literature. What story captures your interest?",
+            "Hello! As your storytelling companion, I'm ready to weave the tales of classic literature. What would you like to hear about?",
+            "Welcome! Let's embark on a journey through the pages of classic literature. What story would you like to explore?"
+        ],
+        "critic": [
+            "Greetings! As your literary critic, I'm ready to provide detailed analysis of classic works. What shall we examine today?",
+            "Welcome! I'm here to offer critical insights into classic literature. Which work or author would you like to discuss?",
+            "Hello! As your literary analyst, I can help you understand the nuances of classic works. What would you like to explore?",
+            "Greetings! Let's examine the literary merits and historical significance of classic works. What shall we analyze?"
+        ]
+    }
+    
+    # Get greetings for the selected personality or default to classic_literature
+    personality_greetings = greetings.get(personality, greetings["classic_literature"])
+    
+    # Return a random greeting from the selected personality's list
+    return random.choice(personality_greetings)
+
+def generate_rag_response(user_query: str, contexts: list, personality: str = "classic_literature"):
     """Generate a response using Azure OpenAI with the retrieved contexts."""
-    # Build system prompt with context information
-    system_prompt = {
-        "role": "system",
-        "content": (
+    # If no query is provided, return a greeting
+    if not user_query or user_query.strip() == "":
+        return get_personality_greeting(personality)
+    
+    # Define different personality prompts
+    personality_prompts = {
+        "classic_literature": (
             "You are a helpful AI assistant with expert knowledge about classic literature. "
             "Below is information retrieved from classic books. Use it to answer the user's question as accurately "
             "and completely as possible. If you're asked about the first line, opening line, or beginning of a book, "
             "make sure to directly quote the first line from the retrieved content.\n\n"
+        ),
+        "philosopher": (
+            "You are a philosophical AI assistant who analyzes classic literature through the lens of great thinkers. "
+            "You provide deep insights and connect literary themes to philosophical concepts. "
+            "Below is information retrieved from classic books. Use it to answer the user's question with philosophical depth "
+            "and intellectual rigor.\n\n"
+        ),
+        "storyteller": (
+            "You are a master storyteller AI assistant who brings classic literature to life through engaging narratives. "
+            "You have a gift for making literary analysis entertaining and accessible. "
+            "Below is information retrieved from classic books. Use it to answer the user's question with vivid storytelling "
+            "and engaging explanations.\n\n"
+        ),
+        "critic": (
+            "You are a literary critic AI assistant who provides detailed analysis and critique of classic literature. "
+            "You examine themes, writing style, historical context, and literary devices. "
+            "Below is information retrieved from classic books. Use it to answer the user's question with critical insight "
+            "and scholarly analysis.\n\n"
+        )
+    }
+    
+    # Get the selected personality prompt or default to classic literature
+    base_prompt = personality_prompts.get(personality, personality_prompts["classic_literature"])
+    
+    # Build system prompt with context information
+    system_prompt = {
+        "role": "system",
+        "content": (
+            base_prompt +
             "Important instructions:\n"
             "1. If the retrieved content contains the answer, provide it directly.\n"
             "2. For quotes, use the exact text from the source material.\n"
