@@ -7,7 +7,7 @@ from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from config import get_logger, enable_telemetry
-import random
+
 
 # initialize logging object
 logger = get_logger(__name__)
@@ -78,46 +78,26 @@ def search_index(query: str, index_name: str, k: int = 5):
     
     return results_list
 
-def get_personality_greeting(personality: str) -> str:
-    """Generate a unique greeting based on the selected personality."""
-    greetings = {
-        "classic_literature": [
-            "Greetings, literary enthusiast! I'm your guide through the timeless world of classic literature. What would you like to explore today?",
-            "Welcome to the realm of classic literature! Shall we dive into a particular book or discuss literary themes?",
-            "Hello! I'm your classic literature companion. Would you like to analyze a specific work or compare different books?",
-            "Greetings! As your literary guide, I can help you explore themes, characters, or historical context. What interests you today?"
-        ],
-        "philosopher": [
-            "Greetings, seeker of wisdom! I'm here to explore the philosophical depths of classic literature. What profound questions shall we contemplate?",
-            "Welcome! As a philosophical guide through literature, I can help you examine deeper meanings and existential themes. What shall we explore?",
-            "Hello! I'm ready to engage in thoughtful discourse about the philosophical implications in classic works. What would you like to discuss?",
-            "Greetings! Let's examine the philosophical underpinnings of classic literature together. What work or theme shall we analyze?"
-        ],
-        "storyteller": [
-            "Welcome to the magical world of storytelling! I'm here to bring classic literature to life. What tale shall we explore today?",
-            "Greetings, fellow story lover! I can help you discover the narrative wonders of classic literature. What story captures your interest?",
-            "Hello! As your storytelling companion, I'm ready to weave the tales of classic literature. What would you like to hear about?",
-            "Welcome! Let's embark on a journey through the pages of classic literature. What story would you like to explore?"
-        ],
-        "critic": [
-            "Greetings! As your literary critic, I'm ready to provide detailed analysis of classic works. What shall we examine today?",
-            "Welcome! I'm here to offer critical insights into classic literature. Which work or author would you like to discuss?",
-            "Hello! As your literary analyst, I can help you understand the nuances of classic works. What would you like to explore?",
-            "Greetings! Let's examine the literary merits and historical significance of classic works. What shall we analyze?"
-        ]
-    }
-    
-    # Get greetings for the selected personality or default to classic_literature
-    personality_greetings = greetings.get(personality, greetings["classic_literature"])
-    
-    # Return a random greeting from the selected personality's list
-    return random.choice(personality_greetings)
-
 def generate_rag_response(user_query: str, contexts: list, personality: str = "classic_literature"):
     """Generate a response using Azure OpenAI with the retrieved contexts."""
-    # If no query is provided, return a greeting
+    # If no query is provided, ask the AI to introduce itself and greet the user in the style of the selected personality
     if not user_query or user_query.strip() == "":
-        return get_personality_greeting(personality)
+        intro_prompt = (
+            f"Please introduce yourself and greet the user in the style of a {personality.replace('_', ' ')} expert on classic literature. "
+            "Describe your role and how you can help the user explore classic books."
+        )
+        messages = [
+            {"role": "system", "content": "You are an AI assistant with a specific personality for discussing classic literature."},
+            {"role": "user", "content": intro_prompt}
+        ]
+        response = chat.chat.completions.create(
+            model=os.environ.get("CHAT_MODEL", "gpt-4"),
+            messages=messages,
+            temperature=0.7,
+            max_tokens=256,
+            top_p=1.0,
+        )
+        return response.choices[0].message.content
     
     # Define different personality prompts
     personality_prompts = {
@@ -156,10 +136,10 @@ def generate_rag_response(user_query: str, contexts: list, personality: str = "c
         "content": (
             base_prompt +
             "Important instructions:\n"
+       
             "1. If the retrieved content contains the answer, provide it directly.\n"
             "2. For quotes, use the exact text from the source material.\n"
             "3. If the content does not fully answer the question, be clear about what you do know and what you don't.\n"
-            "4. Only say you don't know if there is absolutely no relevant information in the retrieved content.\n\n"
             "Retrieved Content:\n"
         )
     }

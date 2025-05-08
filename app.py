@@ -9,7 +9,7 @@ import uuid
 from typing import Optional
 
 from create_search_index import create_index_from_txt
-from book_rag_cli import get_available_indexes, search_index, generate_rag_response, get_personality_greeting
+from book_rag_cli import get_available_indexes, search_index, generate_rag_response
 from config import get_logger
 
 from azure.ai.projects import AIProjectClient
@@ -120,9 +120,9 @@ async def search_books(
     try:
         # If no query is provided, return just the greeting
         if not query or query.strip() == "":
-            greeting = get_personality_greeting(personality)
+            response = generate_rag_response(query, [], personality)
             return {
-                "response": greeting,
+                "response": response,
                 "personality_used": personality,
                 "is_greeting": True
             }
@@ -174,6 +174,21 @@ async def health_check():
 async def read_index():
     """Serve the index.html file"""
     return FileResponse(f"{STATIC_DIR}/index.html")
+
+@app.get("/greeting")
+async def get_greeting(personality: str = "classic_literature"):
+    """Get a dynamic AI-generated greeting for the user based on the selected personality, limited to one sentence."""
+    # Use a custom prompt to ensure the greeting is only one sentence
+    prompt = (
+        f"Please introduce yourself and greet the user in the style of a {personality.replace('_', ' ')} expert on classic literature. "
+        "Your greeting should be only one sentence long."
+    )
+    response = generate_rag_response(prompt, [], personality)
+    return {
+        "response": response,
+        "personality_used": personality,
+        "is_greeting": True
+    }
 
 if __name__ == "__main__":
     import uvicorn
