@@ -32,7 +32,7 @@ This demo showcases how to create a simple application that enables uploading te
 5. Create a `.env` file with your Azure credentials:
    ```
    AIPROJECT_CONNECTION_STRING=your_ai_project_connection_string
-   AISEARCH_INDEX_NAME=books
+   AISEARCH_INDEX_NAME=your_ai_search_index_name
    EMBEDDINGS_MODEL=text-embedding-ada-002  # or text-embedding-3-large
    ```
 

@@ -1,13 +1,12 @@
 import os
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 import shutil
 from pathlib import Path
 import uuid
-from typing import List, Optional
+from typing import Optional
 
 from create_search_index import create_index_from_txt
 from book_rag_cli import get_available_indexes, search_index, generate_rag_response, get_personality_greeting
@@ -170,8 +169,6 @@ async def health_check():
     """Simple health check endpoint"""
     return {"status": "healthy"}
 
-# # Mount static files
-# app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 async def read_index():
