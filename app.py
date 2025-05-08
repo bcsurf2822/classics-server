@@ -13,12 +13,9 @@ from create_search_index import create_index_from_txt
 from book_rag_cli import get_available_indexes, search_index, generate_rag_response, get_personality_greeting
 from config import get_logger
 
-
-from azure.search.documents import SearchClient
 from azure.ai.projects import AIProjectClient
 from azure.ai.projects.models import ConnectionType
 from azure.identity import DefaultAzureCredential
-from azure.core.credentials import AzureKeyCredential
 
 load_dotenv()
 
@@ -37,11 +34,6 @@ app.add_middleware(
 
 ASSETS_DIR = "python/assets"
 os.makedirs(ASSETS_DIR, exist_ok=True)
-
-
-STATIC_DIR = "static"
-os.makedirs(STATIC_DIR, exist_ok=True)
-
 
 project = AIProjectClient.from_connection_string(
     conn_str=os.environ["AIPROJECT_CONNECTION_STRING"], credential=DefaultAzureCredential()
@@ -178,8 +170,8 @@ async def health_check():
     """Simple health check endpoint"""
     return {"status": "healthy"}
 
-# Mount static files
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# # Mount static files
+# app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 async def read_index():
